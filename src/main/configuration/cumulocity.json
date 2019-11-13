@@ -5,10 +5,10 @@
     "name":"Cumulocity GmbH"
   },
   "isolation":"MULTI_TENANT",
-  "requiredRoles": [
-	  "ROLE_INVENTORY_ADMIN",
-	  "ROLE_IDENTITY_ADMIN"
-  ],
+    "requiredRoles": [
+        "ROLE_INVENTORY_ADMIN",
+        "ROLE_IDENTITY_ADMIN"
+    ],
   "roles":[
   ]
 }

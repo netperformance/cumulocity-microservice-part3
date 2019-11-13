@@ -90,7 +90,7 @@
 							<image>microservice-part3</image>
 							<encoding>UTF-8</encoding>
 							
-							<containerSkip>true</containerSkip>
+							<containerSkip>false</containerSkip>
 							
 						</configuration>
 					</execution>
