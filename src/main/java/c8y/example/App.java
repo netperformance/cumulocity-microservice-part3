@@ -1,5 +1,9 @@
 package c8y.example;
 
+import java.math.BigDecimal;
+
+import org.apache.commons.lang.math.RandomUtils;
+import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -13,13 +17,19 @@ import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.ID;
+import com.cumulocity.model.idtype.GId;
+import com.cumulocity.model.measurement.MeasurementValue;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.rest.representation.inventory.ManagedObjects;
+import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.identity.IdentityApi;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
+import com.cumulocity.sdk.client.measurement.MeasurementApi;
 
 import c8y.IsDevice;
+import c8y.TemperatureMeasurement;
 
 @MicroserviceApplication
 @RestController
@@ -40,15 +50,21 @@ public class App{
     // Microservice context
     private final ContextService<MicroserviceCredentials> contextServiceMicroserviceCredentials;
     
+    // Measurement API
+    private final MeasurementApi measurementApi;
+    
+    
     @Autowired
     public App( InventoryApi inventoryApi, 
-    			IdentityApi identityApi, 
+    			IdentityApi identityApi,
+    			MeasurementApi measurementApi, 
     			MicroserviceSubscriptionsService subscriptionService, 
     			ContextService<MicroserviceCredentials> contextServiceMicroserviceCredentials,
     			ContextService<UserCredentials> contextServiceUserCredentials) {
         this.inventoryApi = inventoryApi;
         this.identityApi = identityApi;
         this.subscriptionService = subscriptionService;
+        this.measurementApi = measurementApi;
         this.contextServiceMicroserviceCredentials = contextServiceMicroserviceCredentials;
         this.contextServiceUserCredentials = contextServiceUserCredentials;
     }
@@ -94,10 +110,33 @@ public class App{
     	subscriptionService.runForEachTenant(new Runnable() {
 			@Override
 			public void run() {
-		    	resolveManagedObject();
+				createNewMeasurement();
 			}
 		});
     }    
+    
+    private void createNewMeasurement() {
+    	
+    	ManagedObjectRepresentation managedObjectRepresentation = resolveManagedObject();
+    	
+    	// Create a new temperature measurement
+    	TemperatureMeasurement temperatureMeasurement = new TemperatureMeasurement();
+    	// Set the temperature value and unit
+    	temperatureMeasurement.setT(new MeasurementValue(BigDecimal.valueOf(RandomUtils.nextInt(100)), "C"));
+    	
+    	// Create a new measurement representation
+    	MeasurementRepresentation measurementRepresentation = new MeasurementRepresentation();
+    	// Set the type of the planned measurement e.g. temperature
+    	measurementRepresentation.setType("c8y_TemperatureMeasurement");
+    	// Set the generation time of the measurement:
+    	measurementRepresentation.setDateTime(new DateTime());
+    	// Define the managed object where you would like to send the measurements
+    	measurementRepresentation.setSource(ManagedObjects.asManagedObject(GId.asGId(managedObjectRepresentation.getId())));
+    	// Set the temperature measurement you defined before
+    	measurementRepresentation.set(temperatureMeasurement);
+    	// Create the measurement
+    	measurementApi.create(measurementRepresentation);
+    }
     
     private ManagedObjectRepresentation resolveManagedObject() {
    	
